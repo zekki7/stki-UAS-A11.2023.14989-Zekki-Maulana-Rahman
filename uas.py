@@ -12,8 +12,8 @@ KAMUS_POSITIF = [
     'enak', 'lezat', 'mantap', 'nikmat', 'gurih', 'sedap', 'maknyus', 'juara',
     'empuk', 'renyah', 'crispy', 'fresh', 'segar', 'harum', 'wangi',
     # Kualitas
-    'bagus', 'baik', 'berkualitas', 'premium', 'istimewa', 'spesial', 'hebat',
-    'top', 'terbaik', 'unggul', 'recommended', 'rekomendasi', 'favorit',
+    'bagus', 'berkualitas', 'premium', 'istimewa', 'spesial', 'hebat',
+    'top', 'unggul', 'recommended', 'rekomendasi', 'favorit',
     # Kepuasan
     'puas', 'senang', 'suka', 'cinta', 'favorit', 'recommend', 'worth',
     'memuaskan', 'menyenangkan', 'nyaman', 'oke', 'ok', 'mantul',
@@ -68,20 +68,28 @@ KAMUS_SARAN = [
     'dimaintain', 'maintenance', 'renovasi',
     # Lainnya
     'kalau', 'andai', 'seandainya', 'coba', 'cobalah', 'semoga',
-    'harapan', 'ekspektasi', 'improvement', 'enhance'
+    'harapan', 'ekspektasi', 'improvement', 'enhance',
+    # Hasil stemming dari kata saran (untuk mencocokkan dengan token yang sudah di-stem)
+    'baik', 'harus', 'saran', 'usul', 'kritik', 'tambah', 'tingkat',
+    'perbaik', 'benah', 'kembang', 'luas', 'upgrade', 'perhatikan',
+    'jaga', 'harap'
 ]
 
 # ========================================
 # INISIALISASI SASTRAWI
 # ========================================
 
-print("\n⚙️  Menginisialisasi Sastrawi...")
-factory_stemmer = StemmerFactory()
-stemmer = factory_stemmer.create_stemmer()
+@st.cache_resource
+def init_sastrawi():
+    factory_stemmer = StemmerFactory()
+    stemmer = factory_stemmer.create_stemmer()
+    
+    factory_stopword = StopWordRemoverFactory()
+    stopword_remover = factory_stopword.create_stop_word_remover()
+    
+    return stemmer, stopword_remover
 
-factory_stopword = StopWordRemoverFactory()
-stopword_remover = factory_stopword.create_stop_word_remover()
-print("✓ Sastrawi siap\n")
+stemmer, stopword_remover = init_sastrawi()
 
 # ========================================
 # PREPROCESSING
@@ -157,21 +165,19 @@ def tentukan_kategori_dominan(scores):
 # BACA DATA
 # ========================================
 
+@st.cache_data
 def baca_komentar_dari_folder(folder_path='Data/Raw'):
     komentar_data = []
     
     if not os.path.exists(folder_path):
-        print(f"❌ ERROR: Folder '{folder_path}' tidak ditemukan!")
         return []
     
     files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
     
     if not files:
-        print(f"❌ ERROR: Tidak ada file .txt di folder '{folder_path}'")
         return []
     
     files.sort()
-    print(f"📂 Ditemukan {len(files)} file komentar\n")
     
     for filename in files:
         filepath = os.path.join(folder_path, filename)
@@ -185,7 +191,7 @@ def baca_komentar_dari_folder(folder_path='Data/Raw'):
                     'komentar': komentar
                 })
         except Exception as e:
-            print(f"⚠️  Warning: Gagal membaca file '{filename}': {e}")
+            st.warning(f"Gagal membaca file '{filename}': {e}")
     
     return komentar_data
 
@@ -193,10 +199,9 @@ def baca_komentar_dari_folder(folder_path='Data/Raw'):
 # PROSES DATA
 # ========================================
 
+@st.cache_data
 def proses_semua_komentar(komentar_data):
     hasil = []
-    
-    print("⚙️  Memproses komentar...", end='', flush=True)
     
     for idx, item in enumerate(komentar_data, 1):
         komentar = item['komentar']
@@ -215,7 +220,6 @@ def proses_semua_komentar(komentar_data):
             'kategori_dominan': kategori_dominan
         })
     
-    print(" ✓\n")
     return hasil
 
 # ========================================
@@ -274,153 +278,122 @@ def search_engine(hasil_proses, query):
     return hasil_search
 
 # ========================================
-# TAMPILAN OUTPUT
-# ========================================
-
-def tampilkan_header():
-    print("\n" + "=" * 70)
-    print("SEARCH ENGINE - ANALISIS SENTIMEN KOMENTAR")
-    print("Rumah Makan Bebek Pak Slamet")
-    print("=" * 70 + "\n")
-
-def tampilkan_ringkasan(hasil_proses):
-    counter = Counter([item['kategori_dominan'] for item in hasil_proses])
-    total = len(hasil_proses)
-    
-    print("=" * 70)
-    print("RINGKASAN DATA")
-    print("=" * 70)
-    print(f"Total Komentar: {total}")
-    print(f"\nDistribusi Kategori Dominan:")
-    for kategori in ['POSITIF', 'NEGATIF', 'SARAN', 'TIDAK TERKLASIFIKASI']:
-        count = counter.get(kategori, 0)
-        persen = count/total*100 if total > 0 else 0
-        print(f"  {kategori:20s}: {count:3d} ({persen:5.1f}%)")
-    print("=" * 70 + "\n")
-
-def tampilkan_hasil_search(hasil_search, query):
-    print("\n" + "=" * 70)
-    print(f"HASIL PENCARIAN: '{query}'")
-    print("=" * 70)
-    
-    if not hasil_search:
-        print(f"\n❌ Tidak ditemukan komentar yang relevan dengan '{query}'\n")
-        return
-    
-    print(f"\n✓ Ditemukan {len(hasil_search)} komentar relevan:\n")
-    
-    # Batasi tampilan maksimal 10 hasil
-    max_display = min(10, len(hasil_search))
-    
-    for idx, item in enumerate(hasil_search[:max_display], 1):
-        print(f"[{idx}] Relevance: {item['relevance_score']:.3f} | {item['nama_file']}")
-        print(f"    Komentar: {item['komentar_asli']}")
-        print(f"    Kategori: {item['kategori_dominan']}")
-        print(f"    Skor: P={item['scores']['positif']:.3f}, "
-              f"N={item['scores']['negatif']:.3f}, "
-              f"S={item['scores']['saran']:.3f}")
-        print()
-    
-    if len(hasil_search) > max_display:
-        print(f"... dan {len(hasil_search) - max_display} hasil lainnya")
-    
-    print("=" * 70)
-
-# ========================================
-# MENU INTERAKTIF
-# ========================================
-
-def tampilkan_menu():
-    print("\n" + "=" * 70)
-    print("🔍 MENU SEARCH ENGINE")
-    print("=" * 70)
-    print("1. Cari komentar")
-    print("2. Lihat ringkasan data")
-    print("3. Keluar")
-    print("=" * 70)
-
-def menu_interaktif(hasil_proses):
-    """
-    Menu interaktif untuk search engine di terminal
-    """
-    while True:
-        tampilkan_menu()
-        pilihan = input("\nPilih menu (1-3): ").strip()
-        
-        if pilihan == '1':
-            # Mode pencarian
-            print("\n" + "-" * 70)
-            print("MODE PENCARIAN")
-            print("Ketik 'back' untuk kembali ke menu")
-            print("-" * 70)
-            
-            while True:
-                query = input("\n🔎 Masukkan kata pencarian: ").strip()
-                
-                if query.lower() == 'back':
-                    break
-                
-                if not query:
-                    print("⚠️  Query tidak boleh kosong!")
-                    continue
-                
-                hasil_search = search_engine(hasil_proses, query)
-                tampilkan_hasil_search(hasil_search, query)
-                
-                print("\nIngin mencari lagi? (ketik kata kunci atau 'back' untuk menu)")
-        
-        elif pilihan == '2':
-            # Tampilkan ringkasan
-            tampilkan_ringkasan(hasil_proses)
-            input("\nTekan Enter untuk kembali ke menu...")
-        
-        elif pilihan == '3':
-            # Keluar
-            print("\n" + "=" * 70)
-            print("Terima kasih telah menggunakan Search Engine!")
-            print("=" * 70 + "\n")
-            break
-        
-        else:
-            print("\n❌ Pilihan tidak valid! Silakan pilih 1-3")
-
-# ========================================
-# PROGRAM UTAMA
+# STREAMLIT APP
 # ========================================
 
 def main():
-    tampilkan_header()
+    st.set_page_config(
+        page_title="Search Engine Sentimen Komentar",
+        page_icon="🔍",
+        layout="wide"
+    )
+    
+    st.title("🔍 Search Engine - Analisis Sentimen Komentar")
+    st.subheader("Rumah Makan Bebek Pak Slamet")
+    st.markdown("---")
     
     # Baca data
     folder_path = 'Data/Raw'
-    print(f"📂 Membaca data dari '{folder_path}'...")
     komentar_data = baca_komentar_dari_folder(folder_path)
     
     if not komentar_data:
-        print("\n⚠️  Program dihentikan karena tidak ada data.")
-        print("\n📌 Pastikan struktur folder: Data/Raw/")
-        print("   Letakkan file-file .txt di folder tersebut.")
+        st.error(f"❌ Tidak ada data di folder '{folder_path}'")
+        st.info("📌 Pastikan struktur folder: Data/Raw/ dan letakkan file-file .txt di folder tersebut.")
         return
-    
-    print(f"✓ Berhasil membaca {len(komentar_data)} komentar\n")
     
     # Proses data
     hasil_proses = proses_semua_komentar(komentar_data)
     
-    # Tampilkan ringkasan awal
-    tampilkan_ringkasan(hasil_proses)
+    # Sidebar - Ringkasan Data
+    with st.sidebar:
+        st.header("📊 Ringkasan Data")
+        
+        counter = Counter([item['kategori_dominan'] for item in hasil_proses])
+        total = len(hasil_proses)
+        
+        st.metric("Total Komentar", total)
+        
+        st.markdown("### Distribusi Kategori")
+        for kategori in ['POSITIF', 'NEGATIF', 'SARAN', 'TIDAK TERKLASIFIKASI']:
+            count = counter.get(kategori, 0)
+            persen = count/total*100 if total > 0 else 0
+            
+            # Warna badge
+            if kategori == 'POSITIF':
+                color = "🟢"
+            elif kategori == 'NEGATIF':
+                color = "🔴"
+            elif kategori == 'SARAN':
+                color = "🟡"
+            else:
+                color = "⚪"
+            
+            st.write(f"{color} **{kategori}**: {count} ({persen:.1f}%)")
     
-    # Jalankan menu interaktif
-    menu_interaktif(hasil_proses)
-
-# ========================================
-# JALANKAN PROGRAM
-# ========================================
+    # Main Content - Search
+    st.header("🔎 Pencarian Komentar")
+    
+    query = st.text_input(
+        "Masukkan kata kunci pencarian:",
+        placeholder="Contoh: enak, mahal, lambat, dll."
+    )
+    
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        search_button = st.button("Cari", type="primary", use_container_width=True)
+    
+    if search_button and query:
+        with st.spinner("Mencari komentar..."):
+            hasil_search = search_engine(hasil_proses, query)
+        
+        st.markdown("---")
+        
+        if not hasil_search:
+            st.warning(f"❌ Tidak ditemukan komentar yang relevan dengan '{query}'")
+        else:
+            st.success(f"✓ Ditemukan **{len(hasil_search)}** komentar relevan")
+            
+            # Batasi tampilan maksimal 10 hasil
+            max_display = min(10, len(hasil_search))
+            
+            for idx, item in enumerate(hasil_search[:max_display], 1):
+                with st.container():
+                    # Header hasil
+                    col_a, col_b = st.columns([3, 1])
+                    with col_a:
+                        st.markdown(f"### [{idx}] {item['nama_file']}")
+                    with col_b:
+                        st.metric("Relevance", f"{item['relevance_score']:.3f}")
+                    
+                    # Kategori badge
+                    kategori = item['kategori_dominan']
+                    if kategori == 'POSITIF':
+                        badge_color = "green"
+                    elif kategori == 'NEGATIF':
+                        badge_color = "red"
+                    elif kategori == 'SARAN':
+                        badge_color = "orange"
+                    else:
+                        badge_color = "gray"
+                    
+                    st.markdown(f"**Kategori:** :{badge_color}[{kategori}]")
+                    
+                    # Komentar
+                    st.markdown(f"**Komentar:** {item['komentar_asli']}")
+                    
+                    # Skor detail
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Positif", f"{item['scores']['positif']:.3f}")
+                    with col2:
+                        st.metric("Negatif", f"{item['scores']['negatif']:.3f}")
+                    with col3:
+                        st.metric("Saran", f"{item['scores']['saran']:.3f}")
+                    
+                    st.markdown("---")
+            
+            if len(hasil_search) > max_display:
+                st.info(f"... dan {len(hasil_search) - max_display} hasil lainnya")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n⚠️  Program dihentikan oleh user (Ctrl+C)")
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
+    main()

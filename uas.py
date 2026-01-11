@@ -104,9 +104,24 @@ def tokenizing(text):
     return tokens
 
 def stopword_removal(tokens):
+    """
+    Custom stopword removal yang mempertahankan kata-kata sentimen penting
+    """
+    # Gabungkan semua kata dari kamus sentimen
+    kata_sentimen_penting = set(KAMUS_POSITIF + KAMUS_NEGATIF + KAMUS_SARAN)
+    
+    # Hapus stopword hanya jika bukan kata sentimen
     text = ' '.join(tokens)
     cleaned = stopword_remover.remove(text)
-    return cleaned.split()
+    cleaned_tokens = cleaned.split()
+    
+    # Kembalikan kata sentimen yang mungkin terhapus
+    hasil = []
+    for token in tokens:
+        if token in cleaned_tokens or token in kata_sentimen_penting:
+            hasil.append(token)
+    
+    return hasil
 
 def stemming(tokens):
     text = ' '.join(tokens)

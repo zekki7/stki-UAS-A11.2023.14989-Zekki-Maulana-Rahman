@@ -8,68 +8,46 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 
 
 KAMUS_POSITIF = [
-    # Rasa
     'enak', 'lezat', 'mantap', 'nikmat', 'gurih', 'sedap', 'maknyus', 'juara',
     'empuk', 'renyah', 'crispy', 'fresh', 'segar', 'harum', 'wangi',
-    # Kualitas
     'bagus', 'berkualitas', 'premium', 'istimewa', 'spesial', 'hebat',
     'top', 'unggul', 'recommended', 'rekomendasi', 'favorit',
-    # Kepuasan
     'puas', 'senang', 'suka', 'cinta', 'favorit', 'recommend', 'worth',
     'memuaskan', 'menyenangkan', 'nyaman', 'oke', 'ok', 'mantul',
-    # Porsi & Harga
     'murah', 'terjangkau', 'ekonomis', 'banyak', 'besar', 'jumbo', 'melimpah',
     'cukup', 'pas', 'sesuai', 'sepadan', 'worthit',
-    # Pelayanan
     'ramah', 'sopan', 'cepat', 'sigap', 'tanggap', 'responsif', 'profesional',
-    # Tempat
     'bersih', 'rapi', 'nyaman', 'cozy', 'asri', 'strategis', 'luas',
-    # Lainnya
     'konsisten', 'stabil', 'andal', 'terpercaya', 'cocok', 'sesuai', 'khas',
     'autentik', 'original', 'nagih', 'ketagihan', 'bikin', 'nambah'
 ]
 
 KAMUS_NEGATIF = [
-    # Rasa
     'tidak enak', 'gak enak', 'hambar', 'tawar', 'pahit', 'asam', 'basi',
     'amis', 'anyir', 'tengik', 'keras', 'alot', 'kering', 'gosong', 'mentah',
-    # Waktu
     'lama', 'lambat', 'telat', 'terlambat', 'menunggu', 'antri', 'nunggu',
-    # Harga
     'mahal', 'kemahalan', 'overprice', 'pricey', 'tidak worth', 'gak worth',
-    # Kualitas
     'buruk', 'jelek', 'mengecewakan', 'zonk', 'gagal', 'tidak bagus',
-    # Emosi
     'kecewa', 'kesal', 'jengkel', 'tidak puas', 'gak puas', 'kapok',
-    # Tempat
     'kotor', 'jorok', 'kumuh', 'sempit', 'sesak', 'pengap', 'panas', 'gerah',
     'berantakan', 'acak', 'bau',
-    # Porsi
     'sedikit', 'kurang', 'minim', 'kecil', 'mini', 'pelit',
-    # Pelayanan
     'tidak ramah', 'gak ramah', 'cuek', 'jutek', 'kasar', 'tidak sopan',
     'tidak profesional', 'tidak sigap', 'lemot',
-    # Lainnya
     'tidak recommend', 'gak recommend', 'tidak konsisten', 'menurun',
     'tidak sesuai', 'mengecewakan', 'overrated'
 ]
 
 KAMUS_SARAN = [
-    # Usulan
     'sebaiknya', 'harusnya', 'seharusnya', 'baiknya', 'lebih baik',
     'saran', 'usul', 'masukan', 'kritik', 'suggest', 'suggestion',
-    # Permintaan
     'tolong', 'mohon', 'minta', 'harap', 'dimohon', 'please',
-    # Kebutuhan
     'perlu', 'butuh', 'harus', 'wajib', 'penting', 'dibutuhkan',
-    # Perbaikan
     'ditambah', 'ditingkatkan', 'diperbaiki', 'dibenahi', 'dikembangkan',
     'diperluas', 'ditambahi', 'diupgrade', 'diperhatikan', 'dijaga',
     'dimaintain', 'maintenance', 'renovasi',
-    # Lainnya
     'kalau', 'andai', 'seandainya', 'coba', 'cobalah', 'semoga',
     'harapan', 'ekspektasi', 'improvement', 'enhance',
-    # Hasil stemming dari kata saran (untuk mencocokkan dengan token yang sudah di-stem)
     'baik', 'harus', 'saran', 'usul', 'kritik', 'tambah', 'tingkat',
     'perbaik', 'benah', 'kembang', 'luas', 'upgrade', 'perhatikan',
     'jaga', 'harap'
@@ -107,15 +85,14 @@ def stopword_removal(tokens):
     """
     Custom stopword removal yang mempertahankan kata-kata sentimen penting
     """
-    # Gabungkan semua kata dari kamus sentimen
+    # gabung kata sentimen
     kata_sentimen_penting = set(KAMUS_POSITIF + KAMUS_NEGATIF + KAMUS_SARAN)
     
-    # Hapus stopword hanya jika bukan kata sentimen
+    # Hapus stopword yang bukan kata sentimen
     text = ' '.join(tokens)
     cleaned = stopword_remover.remove(text)
     cleaned_tokens = cleaned.split()
     
-    # Kembalikan kata sentimen yang mungkin terhapus
     hasil = []
     for token in tokens:
         if token in cleaned_tokens or token in kata_sentimen_penting:
@@ -316,10 +293,10 @@ def main():
         st.info("📌 Pastikan struktur folder: Data/Raw/ dan letakkan file-file .txt di folder tersebut.")
         return
     
-    # Proses data
+    # proses data
     hasil_proses = proses_semua_komentar(komentar_data)
     
-    # Sidebar - Ringkasan Data
+    # sidebar - ringkasan Data
     with st.sidebar:
         st.header("📊 Ringkasan Data")
         
@@ -333,7 +310,7 @@ def main():
             count = counter.get(kategori, 0)
             persen = count/total*100 if total > 0 else 0
             
-            # Warna badge
+            # Warna 
             if kategori == 'POSITIF':
                 color = "🟢"
             elif kategori == 'NEGATIF':
@@ -350,7 +327,7 @@ def main():
     
     query = st.text_input(
         "Masukkan kata kunci pencarian:",
-        placeholder="Contoh: enak, mahal, lambat, dll."
+        placeholder="Contoh: enak, mahal, sebaiknya, bebek, dll."
     )
     
     col1, col2 = st.columns([1, 5])
@@ -368,7 +345,6 @@ def main():
         else:
             st.success(f"✓ Ditemukan **{len(hasil_search)}** komentar relevan")
             
-            # Batasi tampilan maksimal 10 hasil
             max_display = min(10, len(hasil_search))
             
             for idx, item in enumerate(hasil_search[:max_display], 1):
@@ -380,7 +356,7 @@ def main():
                     with col_b:
                         st.metric("Relevance", f"{item['relevance_score']:.3f}")
                     
-                    # Kategori badge
+                    # Kategori 
                     kategori = item['kategori_dominan']
                     if kategori == 'POSITIF':
                         badge_color = "green"
